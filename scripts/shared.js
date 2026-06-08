@@ -1,39 +1,112 @@
 // =====================================
-// LOADER STYLES INJECTION (CSS inside JS)
+// URL NORMALIZATION (Netlify & GitHub Compatibility)
 // =====================================
-(function injectLoaderStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-        /* Neon Progress Loader Layout Styles */
-        .ui-loader-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 30px 20px;
-            background: #000000;
-            border-radius: 15px;
-            margin: 20px auto;
-            max-width: 500px;
-            transition: opacity 0.4s ease, visibility 0.4s ease;
-            font-family: 'Inter', sans-serif;
-        }
 
-        .loader-text {
-            color: #00b4d8;
-            font-size: 1.5rem;
-            letter-spacing: 2px;
-            margin-bottom: 12px;
-            text-transform: lowercase;
-        }
+/**
+ * Strips extensions and trailing slashes to ensure safe route comparison
+ * across different hosting environments (Localhost, GitHub Pages, Netlify).
+ */
+function normalizePath(path) {
+    return path
+        .toLowerCase()
+        .replace(".html", "")
+        .replace(/\/$/, ""); // Removes trailing slash if present
+}
 
-        .progress-bar-container {
-            width: 100%;
-            height: 20px;
-            background-color: rgba(0, 180, 216, 0.15);
-            border: 2px solid #00b4d8;
-            border-radius: 50px;
-            overflow: hidden;
+// =====================================
+// ACTIVE PAGE HIGHLIGHTING
+// =====================================
+
+function highlightCurrentPage() {
+    const currentPath = normalizePath(location.pathname);
+
+    // Matches any hardcoded sidebar anchor links to the current browser route
+    document
+        .querySelectorAll("#sidebar a")
+        .forEach(link => {
+            try {
+                const url = new URL(link.href);
+                
+                if (normalizePath(url.pathname) === currentPath) {
+                    link.classList.add("active");
+
+                    // Expand the parent accordion component if collapsed
+                    const details = link.closest("details");
+                    if (details) {
+                        details.open = true;
+                    }
+                }
+            } catch (e) {
+                console.error("Error parsing link URL:", e);
+            }
+        });
+}
+
+// =====================================
+// TOPIC TITLE INJECTION
+// =====================================
+
+function setTopicTitle() {
+    const h1 = document.getElementById("topicTitle");
+    if (!h1) return;
+
+    // Plucks the final URL segment, cleans extensions, and restores readable text spaces
+    const title = location.pathname
+        .split("/")
+        .pop()
+        .replace(".html", "")
+        .replaceAll("-", " ");
+
+    h1.textContent = title;
+}
+
+// =====================================
+// MOBILE NAVIGATION TOGGLE
+// =====================================
+
+function initMobileNavigation() {
+    const nav = document.getElementById("sidebar");
+    const navToggle = document.getElementById("navToggle");
+    const overlay = document.getElementById("navOverlay");
+
+    if (!nav || !navToggle) return;
+
+    // Toggle drawer menu layout and dark background overlay
+    navToggle.onclick = e => {
+        e.stopPropagation();
+        nav.classList.toggle("active");
+        if (overlay) overlay.classList.toggle("active");
+    };
+
+    // Close menu instantly if background dim overlay is tapped
+    if (overlay) {
+        overlay.onclick = () => {
+            nav.classList.remove("active");
+            overlay.classList.remove("active");
+        };
+    }
+
+    // Safety click-away document interceptor 
+    document.addEventListener("click", e => {
+        const inside = nav.contains(e.target);
+        const toggle = navToggle.contains(e.target);
+
+        if (!inside && !toggle) {
+            nav.classList.remove("active");
+            if (overlay) overlay.classList.remove("active");
+        }
+    });
+}
+
+// =====================================
+// APPLICATION INITIALIZATION
+// =====================================
+
+document.addEventListener("DOMContentLoaded", () => {
+    highlightCurrentPage();
+    setTopicTitle();
+    initMobileNavigation();
+});
             position: relative;
         }
 
